@@ -75,7 +75,7 @@ disp.show()
 draw.text((x, top + 8), "Hello, Hans", font=font, fill=255)
 disp.image(image)
 disp.show()
-time.sleep(10)
+time.sleep(2)
 
 
 killer = GracefulKiller()
@@ -91,15 +91,22 @@ while not killer.kill_now:
 	    IP = subprocess.check_output(cmd, shell=True).decode("utf-8")
 	    cmd = "top -bn1 | grep load | awk '{printf \"CPU Load: %.2f\", $(NF-2)}'"
 	    CPU = subprocess.check_output(cmd, shell=True).decode("utf-8")
-	    cmd = "free -m | awk 'NR==2{printf \"Mem: %s/%s MB  %.2f%%\", $3,$2,$3*100/$2 }'"
+	    cmd = "free -m | awk 'NR==2{printf \"Mem: %s/%s MB  %.0f%%\", $3,$2,$3*100/$2 }'"
 	    MemUsage = subprocess.check_output(cmd, shell=True).decode("utf-8")
 	    cmd = 'df -h | awk \'$NF=="/"{printf "Disk: %d/%d GB  %s", $3,$2,$5}\''
 	    Disk = subprocess.check_output(cmd, shell=True).decode("utf-8")
-	    cmd = '/usr/sbin/iwgetid -r'
-	    Net = subprocess.check_output(cmd, shell=True).decode("utf-8")
+	    try:
+	        cmd = '/usr/sbin/iwgetid -r'
+	        Net = subprocess.check_output(cmd, shell=True).decode("utf-8")
+	    except subprocess.CalledProcessError as e:
+	        print(e.returncode)
+	        if e.returncode>0: # actual error
+	            Net = "none"
+	        else:  # negative return code means signal
+	            raise e
 	    time_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
 	    cmd = 'uptime -p'
-	    UpTime = subprocess.check_output(cmd, shell=True).decode("utf-8")
+	    UpTime = subprocess.check_output(cmd, shell=True).decode("utf-8").replace('hour', 'hr').replace('minute', 'min')
 
 	    # Write four lines of text.
 	    line1 = [time_str]
@@ -119,6 +126,7 @@ while not killer.kill_now:
 	    i=(i+1)%imax
     except subprocess.CalledProcessError as e:
         print('caught error in subprocess')
+
         print(e)
         killer.kill_now=True
 else:
